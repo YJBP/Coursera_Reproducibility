@@ -1,0 +1,111 @@
+---
+title: "Reproducibility research part 1"
+author: "Ymke de Jong"
+date: "February 8, 2017"
+output: html_document
+---
+### 1. Code for reading in the dataset and/or processing the data
+```{r setup, include=FALSE}
+rm(list=ls())
+setwd("C:/Users/Ymke.de.jong/OneDrive - BPSolutions Group/Ymke/Scirpts/R/Coursera - Reproducibility Research")
+
+dataACT <- read.csv("activity.csv",stringsAsFactors=FALSE);
+dataACT$date <- as.POSIXct(dataACT$date, format="%Y-%m-%d")
+dataACT$day <- weekdays(as.Date(dataACT$date))
+
+dataACT_df <- data.frame(dataACT)
+
+rm(dataACT)
+
+head(dataACT_df)
+```
+
+### 2. Histogram of the total number of steps taken each day
+
+```{r,fig.width=7}
+subgr_data <- aggregate(dataACT_df$steps,list(dataACT_df$date),sum)
+names(subgr_data) <- c("date","total")
+head(subgr_data)
+hist(subgr_data$total, 
+     breaks=seq(from=0, to=25000, by=2500))
+
+```
+
+
+### 3. Mean and median number of steps taken each day
+
+```{r,echo = FALSE}
+mn      <- mean(subgr_data$total,na.rm = TRUE)
+med     <- median(subgr_data$total,na.rm = TRUE)
+```
+*The mean of the steps per day is: `r mn ` and the median is `r med`*
+
+### 4. Time series plot of the average number of steps taken
+
+```{r}
+subgr_mean <- aggregate(dataACT_df$steps,list(dataACT_df$interval),mean,na.rm=TRUE)
+names(subgr_mean) <- c("interval","average")
+
+plot(x=subgr_mean$interval,
+     y=subgr_mean$average,
+     type = "l",
+     lwd = 2,
+     xlab = "Interval [minutes]",
+     ylab = "Mean steps")
+```
+
+### 5. The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r}
+posmax <- subgr_mean[which.max(subgr_mean$average),]$interval
+```
+
+The interval with the maximum mean steps is `r posmax`.
+
+### 6. Code to describe and show a strategy for imputing missing data
+
+```{r}
+N_na <- sum(is.na(dataACT_df$steps))
+
+na_pos <- which(is.na(dataACT_df$steps))
+
+mean_vec <- rep(mean(dataACT_df$steps, na.rm=TRUE), times=length(na_pos))
+
+dataACT_df[na_pos, "steps"] <- mean_vec
+```
+
+### 7. Histogram of the total number of steps taken each day after missing values are imputed
+
+```{r,fig.width=7}
+subgr_sum <- aggregate(dataACT_df$steps, list(dataACT_df$date),sum)
+names(subgr_sum) <- c("date","sum")
+
+hist(subgr_sum$sum,
+     breaks=seq(from=0, to=25000, by=2500),
+     xlab="Number of steps")
+```
+
+### 8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r}
+dataACT_df <- cbind(dataACT_df,daytype=ifelse(dataACT_df$day ==
+                                                              "Saturday"|
+                                        dataACT_df$day == "Sunday", "weekend",
+                                        "weekday"))
+data_weekdays <- aggregate(dataACT_df$steps,
+                           list(dataACT_df$daytype,
+                                dataACT_df$day,
+                                dataACT_df$interval),
+                           mean)
+
+names(data_weekdays) <- c("daytype","day","interval","average")
+
+library(ggplot2)
+
+ggplot(data_weekdays, aes(x=interval, y=average)) + 
+        geom_line(color="violet") + 
+        facet_wrap(~ daytype, nrow=2, ncol=1) +
+        labs(x="Interval", y="Number of steps") 
+
+
+```
+### 9. All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
